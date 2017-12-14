@@ -10,6 +10,15 @@ extern "C"
 #include "unistd.h"
 };
 
+#define WATCH_DEBUG 0
+
+#ifdef WATCH_DEBUG
+#include <iostream>
+#define LOG(...) std::cout << __VA_ARGS__ << std::endl;
+#else
+#define LOG(...)
+#endif
+
 namespace watch
 {
     struct directory_event
@@ -165,6 +174,8 @@ namespace watch_impl
         
         void ParseEvent(inotify_event& event)
         {
+            LOG("Parse " << event.mask);
+            
             std::vector<watch::directory_event>& vec = events_[event.wd];
    
             if((event.mask & DeadFlags) != 0)
