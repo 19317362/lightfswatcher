@@ -1,9 +1,10 @@
 #include "watch.h"
 #include <thread>
+#include <iostream>
 
 int main()
 {
-    watch::directory dir("dir");
+    watch::file dir(".", "help.txt");
     watch::directory_event event;
  
     while(true)

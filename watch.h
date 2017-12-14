@@ -2,15 +2,12 @@
 
 #include <unordered_map>
 #include <vector>
-#include <cassert>
-#include <iostream>
-
+#include <climits>
 
 extern "C"
 {
 #include "sys/inotify.h"
 #include "unistd.h"
-#include <limits.h>
 };
 
 namespace watch
@@ -101,7 +98,28 @@ namespace watch
             
             return true;
         }
+    };
     
+    template<typename DirectoryWatcherType>
+    struct generic_file_watcher
+    {
+        DirectoryWatcherType DirectoryWatcher;
+        std::string Filename;
+        
+        generic_file_watcher(const std::string& dir, const std::string& file) :
+                DirectoryWatcher(dir),
+                Filename(file)
+        { }
+        
+        bool PollEvent(watch::directory_event& event)
+        {
+            while(DirectoryWatcher.PollEvent(event))
+            {
+                if(event.Name == Filename)
+                    return true;
+            }
+            return false;
+        }
     };
 };
 
@@ -148,7 +166,7 @@ namespace watch_impl
         void ParseEvent(inotify_event& event)
         {
             std::vector<watch::directory_event>& vec = events_[event.wd];
-            std::cout << "mask: 0x" << std::hex << event.mask << std::dec << " file: " << event.name <<  std::endl;
+   
             if((event.mask & DeadFlags) != 0)
             {
                 // dead
@@ -218,12 +236,9 @@ namespace watch_impl
             
             if(len == -1)
                 return;
-             
-            std::cout << "Read " << len << std::endl;
-            
+      
             while(len > offset)
             {
-                std::cout << "Parsing." << std::endl;
                 inotify_event* ev = (inotify_event*)(offset + eventBuffer_);
                 ParseEvent(*ev);
                 offset += sizeof(ev->mask) + sizeof(ev->wd) + sizeof(ev->cookie) + sizeof(ev->len) + ev->len;
@@ -246,4 +261,5 @@ namespace watch
 #endif
     
     using directory = generic_directory_watch<global_watch_pool_type>;
+    using file = generic_file_watcher<directory>;
 };
