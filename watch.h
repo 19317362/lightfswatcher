@@ -114,6 +114,31 @@ namespace watch
     {
         DirectoryWatcherType DirectoryWatcher;
         std::string Filename;
+    
+        static std::string GetDirectory(const std::string& dir)
+        {
+            for(auto iter = dir.rbegin(); iter != dir.rend(); iter++)
+            {
+                if(*iter == '/' || *iter == '\\')
+                    return std::string(dir.begin(), dir.end() - std::distance(dir.rbegin(), iter));
+            }
+            return {};
+        }
+    
+        static std::string GetFilename(const std::string& dir)
+        {
+            for(auto iter = dir.rbegin(); iter != dir.rend(); iter++)
+            {
+                if(*iter == '/' || *iter == '\\')
+                    return std::string(dir.end() - std::distance(dir.rbegin(), iter), dir.end());
+            }
+            return {};
+        }
+    
+        explicit generic_file_watcher(const std::string& dir) :
+                DirectoryWatcher(GetDirectory(dir)),
+                Filename(GetFilename(dir))
+        {}
         
         generic_file_watcher(const std::string& dir, const std::string& file) :
                 DirectoryWatcher(dir),
