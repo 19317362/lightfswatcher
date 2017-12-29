@@ -8,9 +8,9 @@ extern "C"
 {
 #include "sys/inotify.h"
 #include "unistd.h"
-};
+}
 
-#define WATCH_DEBUG 0
+//#define WATCH_DEBUG 0
 
 #ifdef WATCH_DEBUG
 #include <iostream>
@@ -18,6 +18,7 @@ extern "C"
 #else
 #define LOG(...)
 #endif
+
 
 namespace watch
 {
@@ -49,24 +50,25 @@ namespace watch
     struct generic_directory_watch
     {
         using id_type = typename PoolType::id_type;
+        using pool_type = PoolType;
 
         std::string Path;
-        PoolType& Pool;
+        PoolType* Pool;
         
         id_type NativeHandle = -1;
         int Ticket = -1;
         bool Dead = true;
         
-        explicit generic_directory_watch(const std::string& path) :
+        explicit generic_directory_watch(const std::string& path, PoolType* poolPtr) :
                 Path(path),
-                Pool(PoolType::getGlobalPool())
+                Pool(poolPtr)
         {
             Recreate();
         }
         
         void Destroy()
         {
-            Pool.Destroy(NativeHandle);
+            Pool->Destroy(NativeHandle);
             Dead = true;
         }
         
@@ -74,7 +76,7 @@ namespace watch
         {
             Destroy();
             
-            auto result = Pool.Create(Path.c_str());
+            auto result = Pool->Create(Path.c_str());
             if(result.Error == 0)
             {
                 Dead = false;
@@ -95,8 +97,8 @@ namespace watch
             if(Dead) // Recreate should change Dead to false if it succeeded, if it failed we need to bail.
                 return false;
             
-            Pool.Update();
-            auto vec = Pool.GetEvents(NativeHandle);
+            Pool->Update();
+            auto vec = Pool->GetEvents(NativeHandle);
             if(Ticket >= vec.size())
                 return false;
             
@@ -135,8 +137,9 @@ namespace watch
             return {};
         }
     
-        explicit generic_file_watcher(const std::string& dir) :
-                DirectoryWatcher(GetDirectory(dir)),
+        explicit generic_file_watcher(const std::string& dir,
+                                      typename DirectoryWatcherType::pool_type* ptr) :
+                DirectoryWatcher(GetDirectory(dir), ptr),
                 Filename(GetFilename(dir))
         {}
         
@@ -155,7 +158,7 @@ namespace watch
             return false;
         }
     };
-};
+}
 
 namespace watch_impl
 {
@@ -234,12 +237,6 @@ namespace watch_impl
             std::free(eventBuffer_);
         }
     
-        static inline inotify_watch_pool& getGlobalPool()
-        {
-            static inotify_watch_pool pool = {};
-            return pool;
-        }
-    
         struct create_result
         {
             int Error = 0;
@@ -291,11 +288,10 @@ namespace watch_impl
 
 namespace watch
 {
-
-#ifdef __unix__
+#if __unix__
     using global_watch_pool_type = watch_impl::inotify_watch_pool;
 #endif
     
     using directory = generic_directory_watch<global_watch_pool_type>;
     using file = generic_file_watcher<directory>;
-};
+}
