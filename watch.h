@@ -99,7 +99,7 @@ namespace watch
             
             Pool->Update();
             auto vec = Pool->GetEvents(NativeHandle);
-            if(Ticket >= vec.size())
+            if(static_cast<size_t>(Ticket) >= vec.size())
                 return false;
             
             event = vec.at(Ticket++);
@@ -258,6 +258,7 @@ namespace watch_impl
             if(id == -1)
                 return;
             
+            // TODO : invalid read on watch dtor here (valgrind)
             inotify_rm_watch(handleInotify_, id);
         }
         
