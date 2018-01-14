@@ -250,7 +250,11 @@ namespace watch_impl
             
             id_type handle = inotify_add_watch(handleInotify_, file, flags);
             
-            return {(handle == -1 ? errno : 0), handle, events_[handle].size()};
+            create_result result;
+            result.Error = (handle == -1 ? errno : 0);
+            result.Handle = handle;
+            result.Ticket = events_[handle].size();
+            return result;
         }
         
         void Destroy(id_type id)
