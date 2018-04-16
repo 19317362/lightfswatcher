@@ -59,6 +59,11 @@ namespace watch
         int Ticket = -1;
         bool Dead = true;
         
+        generic_directory_watch() :
+            Pool(0),
+            Dead(true)
+        {}
+
         explicit generic_directory_watch(const std::string& path, PoolType* poolPtr) :
                 Path(path),
                 Pool(poolPtr)
@@ -136,6 +141,10 @@ namespace watch
             }
             return {};
         }
+
+        generic_file_watcher() :
+            DirectoryWatcher()
+        {}
     
         explicit generic_file_watcher(const std::string& dir,
                                       typename DirectoryWatcherType::pool_type* ptr) :
@@ -253,7 +262,7 @@ namespace watch_impl
             create_result result;
             result.Error = (handle == -1 ? errno : 0);
             result.Handle = handle;
-            result.Ticket = events_[handle].size();
+            result.Ticket = (handle == -1 ? 0 : events_[handle].size());
             return result;
         }
         
